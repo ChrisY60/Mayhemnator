@@ -1,0 +1,45 @@
+import {chromium} from '@playwright/test';
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+const browser=await chromium.launch({channel:'msedge',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+try {
+ await page.goto('http://localhost:5173');await page.getByRole('button',{name:'Load example'}).waitFor();
+ assert.equal(await page.locator('.champ-slot.empty').count(),5);
+ await page.getByRole('button',{name:'Load example'}).click();
+ assert.equal(await page.locator('.comp-row').count(),5);
+ await page.locator('[data-lock="jinx"]').click();
+ assert.equal(await page.locator('.locked').count(),1);
+ await page.locator('[data-mode="winrate"]').click();
+ assert.ok((await page.locator('.comp-row').first().innerText()).includes('Jinx'));
+ await page.locator('[data-use]').first().click();
+ await page.reload();await page.locator('.comp-row').first().waitFor();
+ assert.equal(await page.locator('.locked').count(),1);
+ await mkdir('.cache',{recursive:true});
+ await page.screenshot({path:'.cache/team-desktop.png',fullPage:true});
+ await page.locator('nav [data-tab="advisor"]').click();
+ const offers=['Scopier Weapons','Critical Missile','Soul Siphon'];
+ for(let i=0;i<3;i++){const input=page.locator(`[data-augment="${i}"]`);await input.fill(offers[i]);await input.dispatchEvent('change');}
+ assert.equal(await page.locator('.augment-card').count(),3);
+ await page.locator('.augment-card [data-pick]').first().click();
+ assert.equal(await page.locator('.owned-chip').count(),1);
+ assert.equal(await page.locator('.augment-card').count(),0);
+ await page.locator('[data-picker="enemies:0"]').click();await page.locator('#picker-search').fill('Ornn');await page.locator('[data-choose="ornn"]').click();
+ await page.locator('[data-picker="enemies:1"]').click();await page.locator('#picker-search').fill('Malphite');await page.locator('[data-choose="malphite"]').click();
+ const giant=page.locator('[data-augment="0"]');await giant.fill('Giant Slayer');await giant.dispatchEvent('change');
+ assert.ok((await page.locator('.augment-card').innerText()).includes('Context estimate'));
+ assert.ok(await page.locator('.build-item').count()>0);
+ await page.screenshot({path:'.cache/advisor-desktop.png',fullPage:true});
+ await page.locator('nav [data-tab="stats"]').click();await page.locator('#stats-search').fill('gwen');assert.equal(await page.locator('tbody tr').count(),1);
+ await page.locator('#stats-search').fill('zzzznomatch');assert.ok((await page.locator('tbody').innerText()).includes('No champions'));
+ await page.locator('#method-button').click();assert.equal(await page.locator('#method').evaluate(e=>e.open),true);await page.keyboard.press('Escape');
+ await page.setViewportSize({width:390,height:844});await page.locator('nav [data-tab="team"]').click();
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);assert.equal(overflow,false);
+ await page.screenshot({path:'.cache/team-mobile.png',fullPage:true});
+ await page.locator('nav [data-tab="advisor"]').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+ await page.screenshot({path:'.cache/advisor-mobile.png',fullPage:true});
+ const images=await page.locator('img').evaluateAll(imgs=>imgs.map(i=>({src:i.src,loaded:i.complete&&i.naturalWidth>0})));
+ console.log(JSON.stringify({result:'Browser workflows passed',errors,imagesLoaded:images.filter(i=>i.loaded).length,imagesTotal:images.length},null,2));
+ assert.deepEqual(errors,[]);
+} finally {await browser.close();}
