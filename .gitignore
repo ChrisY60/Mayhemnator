@@ -3,3 +3,26 @@ node_modules/
 scripts/*payload.txt
 scripts/*.html
 *.zip
+
+# Logs and local environment
+*.log
+npm-debug.log*
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
